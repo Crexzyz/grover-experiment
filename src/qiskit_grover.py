@@ -9,7 +9,7 @@ from qiskit import (
 class QiskitGrover(GroverAlgorithm):
     clause_list = [[0,1],[0,2],[1,3],[2,3]]
     
-    
+
     def __init__(self):
         self.value_qubits = 4
         self.clause_number = len(self.clause_list)
@@ -38,20 +38,25 @@ class QiskitGrover(GroverAlgorithm):
 
 
     def Oracle(self):
+        oracle_circuit = QuantumCircuit(self.result_qubits, self.clause_qubits, self.output_qubit)
+
         # Compute clauses
-        i = 0
-        for clause in self.clause_list:
-            self.XOR(clause[0], clause[1], self.clause_qubits[i])
-            i += 1
+        for index, clause in enumerate(self.clause_list):
+            self.XOR(oracle_circuit, clause[0], clause[1], self.clause_qubits[index])
 
         # Flip 'output' bit if all clauses are satisfied
-        self.qc.mct(self.clause_qubits, self.output_qubit)
+        oracle_circuit.mct(self.clause_qubits, self.output_qubit)
 
         # Uncompute clauses to reset clause-checking bits to 0
-        i = 0
-        for clause in self.clause_list:
-            self.XOR(clause[0], clause[1], self.clause_qubits[i])
-            i += 1
+        for index, clause in enumerate(self.clause_list):
+            self.XOR(oracle_circuit, clause[0], clause[1], self.clause_qubits[index])
+
+        return oracle_circuit
+
+
+    def XOR(self, circuit, qubit_a, qubit_b, output_qubit):
+        circuit.cx(qubit_a, output_qubit)
+        circuit.cx(qubit_b, output_qubit)
 
 
     def Diffuser(self):
@@ -83,17 +88,15 @@ class QiskitGrover(GroverAlgorithm):
         self.qc.measure(self.result_qubits, self.cbits)
 
 
-    def XOR(self, a, b, output):
-        self.qc.cx(a, output)
-        self.qc.cx(b, output)
-
-
     def Build(self):
         self.PrepareStates()
 
+        oracle = self.Oracle()
+        oracle.name = "Oracle"
+
         for _ in range(2):
-            self.Oracle()
-            self.qc.barrier()
+            self.qc.append(oracle, [i for i in range(9)])
             self.Diffuser()
+            self.qc.barrier()
 
         self.Measure()
