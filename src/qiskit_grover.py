@@ -24,7 +24,9 @@ class QiskitGrover(GroverAlgorithm):
 
     def PrepareStates(self):
         # Initialize 'out0' in state |->
-        self.qc.initialize([1, -1]/np.sqrt(2), self.output_qubit)
+        # self.qc.initialize([1, -1]/np.sqrt(2), self.output_qubit)
+        self.qc.h(self.output_qubit)
+        self.qc.s(self.output_qubit)
 
         # Initialize qubits in state |s>
         for index, var_qubit in enumerate(self.result_qubits):
