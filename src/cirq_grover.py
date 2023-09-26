@@ -32,8 +32,8 @@ class CirqGrover(GroverAlgorithm):
         initializer = cirq.Circuit()
 
         # Initialize output in state |->
+        initializer.append(cirq.X(*self.output_qubits))
         initializer.append(cirq.H(*self.output_qubits))
-        initializer.append(cirq.S(*self.output_qubits))
 
         # Initialize results in state |s>
         for result_qubit in self.result_qubits:
