@@ -23,20 +23,21 @@ class QiskitGrover(GroverAlgorithm):
 
 
     def PrepareStates(self):
+        initializer = QuantumCircuit(self.result_qubits, self.output_qubit)
         # Initialize 'out0' in state |->
         # self.qc.initialize([1, -1]/np.sqrt(2), self.output_qubit)
-        self.qc.x(self.output_qubit)
-        self.qc.h(self.output_qubit)
+        initializer.x(self.output_qubit)
+        initializer.h(self.output_qubit)
 
         # Initialize qubits in state |s>
         for index, var_qubit in enumerate(self.result_qubits):
             if index in self.known_qubits:
                 if self.known_qubits[index]:
-                    self.qc.x(index)
+                    initializer.x(index)
             if index in self.unknown_qubits:
-                self.qc.h(var_qubit)
+                initializer.h(var_qubit)
 
-        self.qc.barrier()
+        return initializer
 
 
     def Oracle(self):
@@ -80,25 +81,33 @@ class QiskitGrover(GroverAlgorithm):
         # Apply transformation |00..0> -> |s>
         for qubit in self.unknown_qubits:
             diffuser.h(qubit)
-        # We will return the diffuser as a gate
-        diffuser_gate = diffuser.to_gate()
-        diffuser_gate.name = "U$_s$"
-        self.qc.append(diffuser_gate, self.unknown_qubits)
+
+        return diffuser
 
 
     def Measure(self):
-        self.qc.measure(self.result_qubits, self.cbits)
+        measure_circuit = QuantumCircuit(self.result_qubits, self.cbits)
+        measure_circuit.measure(self.result_qubits, self.cbits)
+        return measure_circuit
 
 
     def Build(self):
-        self.PrepareStates()
+        initializer = self.PrepareStates()
+        initializer.name = "Init"
+        self.qc.append(initializer, [*self.result_qubits, self.output_qubit])
+        self.qc.barrier()
 
         oracle = self.Oracle()
         oracle.name = "Oracle"
 
+        diffuser = self.Diffuser()
+        diffuser.name = "Diffuser"
+
         for _ in range(2):
             self.qc.append(oracle, [i for i in range(9)])
-            self.Diffuser()
+            self.qc.append(diffuser, self.unknown_qubits)
             self.qc.barrier()
 
-        self.Measure()
+        measurer = self.Measure()
+        measurer.name = "Measure values"
+        self.qc.append(measurer, self.result_qubits, self.cbits)
