@@ -1,5 +1,6 @@
 import argparse
 import time
+import datetime
 
 from qiskit_aer import AerSimulator
 from qiskit import Aer, transpile
@@ -12,6 +13,10 @@ SHOTS = 4096
 
 def main():
     parser = argparse.ArgumentParser(description="Quantum Simulator Selector")
+
+    # Add a flag for selecting the running environment (laptop or pakhus)
+    parser.add_argument('-e', '--environment', choices=['laptop', 'pakhus'], required=True,
+                        help='Specify the environment (laptop or pakhus)')
     
     # Add a flag for selecting the quantum simulator (qiskit or cirq)
     parser.add_argument('-s', '--simulator', choices=['qiskit', 'cirq'], required=True, 
@@ -26,13 +31,15 @@ def main():
     # Access the selected options
     selected_simulator = args.simulator
     num_threads = args.threads
+    environment = args.environment
+    timestamp = datetime.datetime.utcnow().isoformat()
     time = 0
     if selected_simulator == "qiskit":
         time = qiskit_run(num_threads)
     elif selected_simulator == "cirq":
         time = cirq_run(num_threads)
 
-    print(f"{selected_simulator}, {num_threads}, {time}")
+    print(f"{timestamp}, {environment}, {selected_simulator}, {num_threads}, {time}")
     
 
 def qiskit_run(threads):
